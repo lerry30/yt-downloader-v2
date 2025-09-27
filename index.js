@@ -6,7 +6,7 @@ const readline = createInterface({
 	output: process.stdout
 });
 
-function downloadMedia(url, outputPath, type = "video", options = {}) {
+function downloadMedia(url, outputPath, type="video", options = {}) {
     const args = [url, "--output", outputPath];
     
     if (type === "audio") {
@@ -68,17 +68,19 @@ async function prompt(question) {
 async function start() {
     const videoLink = await prompt('Paste the URL: ');
     const videoName = await prompt('Enter filename: ');
-    const rtype = await prompt('MP4(yes default)/MP3(no): ');
+    const rtype = await prompt('MP3(yes)? Default MP4: ');
     const restype = {
-            y: 'mp4', yes: 'mp4', Y: 'mp4', YES: 'mp4',
-            n: 'mp3', no: 'mp3', N: 'mp3', NO: 'mp3'
+            y: 'video', yes: 'video',
+            n: 'audio', no: 'audio'
         };
 
-    const type = restype[String(rtype).toLowerCase()];
-    console.log(type);
-    if(!type) return;
+    const type = restype[String(rtype).toLowerCase()] || 'video';
+    const extension = type==='video' ? 'mp4' : 'mp3';
+    const fullPath = `output/${videoName}.${extension}`; 
     
-    await downloadMedia(videoLink, videoName, type);
+    await downloadMedia(videoLink, fullPath, type);
+
+    process.exit(0);
 }
 
 start();
