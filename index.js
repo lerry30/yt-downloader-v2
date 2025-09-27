@@ -8,26 +8,46 @@ const readline = createInterface({
 
 function downloadMedia(url, outputPath, type = "video", options = {}) {
     const args = [url, "--output", outputPath];
-
+    
     if (type === "audio") {
         args.push("--extract-audio", "--audio-format", options.audioFormat || "mp3");
+        // For audio, get best quality audio
+        args.push("--format", "bestaudio");
     } else if (type === "video") {
-        // Video with audio (default behavior)
-        if (options.quality) {
-            args.push("--format", options.quality);
+        // For video, use best quality format that includes both video and audio
+        let format = options.quality;
+        
+        if (!format) {
+            // Default to best quality video+audio, fallback to best available
+            format = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best";
         }
+        
+        args.push("--format", format);
+        
         if (options.videoFormat) {
             args.push("--recode-video", options.videoFormat);
         }
+        
+        // Merge video and audio into single file if separate streams
+        args.push("--merge-output-format", options.mergeFormat || "mp4");
     }
-
+    
+    // Optional: Add progress display
+    if (options.showProgress !== false) {
+        args.push("--progress");
+    }
+    
     return new Promise((resolve, reject) => {
         const ytdlp = spawn("yt-dlp", args);
-
+        
+        ytdlp.stdout.on("data", (data) => {
+            console.log(`yt-dlp: ${data}`);
+        });
+        
         ytdlp.stderr.on("data", (data) => {
             console.log(`yt-dlp: ${data}`);
         });
-
+        
         ytdlp.on("close", (code) => {
             code === 0 ? resolve() : reject(new Error(`Process exited with code ${code}`));
         });
@@ -51,16 +71,14 @@ async function start() {
     const rtype = await prompt('MP4(yes default)/MP3(no): ');
     const restype = {
             y: 'mp4', yes: 'mp4', Y: 'mp4', YES: 'mp4',
-            n: 'mp4', no: 'mp4', N: 'mp4', NO: 'mp4'
+            n: 'mp3', no: 'mp3', N: 'mp3', NO: 'mp3'
         };
 
     const type = restype[String(rtype).toLowerCase()];
     console.log(type);
     if(!type) return;
     
-    const options = {quality: 'best'};
-    
-    await downloadMedia(videoLink, videoName, type, options);
+    await downloadMedia(videoLink, videoName, type);
 }
 
 start();
