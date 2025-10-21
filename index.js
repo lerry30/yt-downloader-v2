@@ -70,8 +70,8 @@ async function start() {
     const videoName = await prompt('Enter filename: ');
     const rtype = await prompt('MP3(yes)? Default MP4: ');
     const restype = {
-            y: 'video', yes: 'video',
-            n: 'audio', no: 'audio'
+            y: 'audio', yes: 'audio',
+            n: 'video', no: 'video'
         };
 
     const type = restype[String(rtype).toLowerCase()] || 'video';
