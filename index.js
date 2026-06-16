@@ -6,50 +6,46 @@ const readline = createInterface({
 	output: process.stdout
 });
 
-function downloadMedia(url, outputPath, type="video", options = {}) {
+function downloadMedia(url, outputPath, type = "video", options = {}) {
     const args = [url, "--output", outputPath];
-    
+
     if (type === "audio") {
         args.push("--extract-audio", "--audio-format", options.audioFormat || "mp3");
-        // For audio, get best quality audio
-        args.push("--format", "bestaudio");
+        args.push("--format", "bestaudio/best");
     } else if (type === "video") {
-        // For video, use best quality format that includes both video and audio
         let format = options.quality;
-        
+
         if (!format) {
-            // Default to best quality video+audio, fallback to best available
-            format = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best";
+            // Best separate video+audio streams (any codec), merged into mp4
+            // Falls back to best single-file stream if merging isn't possible
+            format = "bestvideo+bestaudio/best";
         }
-        
+
         args.push("--format", format);
-        
+
+        // Always merge into mp4 for compatibility
+        args.push("--merge-output-format", options.mergeFormat || "mp4");
+
         if (options.videoFormat) {
             args.push("--recode-video", options.videoFormat);
         }
-        
-        // Merge video and audio into single file if separate streams
-        args.push("--merge-output-format", options.mergeFormat || "mp4");
     }
-    
-    // Optional: Add progress display
+
+    // Prefer ffmpeg for merging (higher quality than avconv)
+    args.push("--prefer-ffmpeg");
+
     if (options.showProgress !== false) {
         args.push("--progress");
     }
-    
+
     return new Promise((resolve, reject) => {
         const ytdlp = spawn("yt-dlp", args);
-        
-        ytdlp.stdout.on("data", (data) => {
-            console.log(`yt-dlp: ${data}`);
-        });
-        
-        ytdlp.stderr.on("data", (data) => {
-            console.log(`yt-dlp: ${data}`);
-        });
-        
+
+        ytdlp.stdout.on("data", (data) => process.stdout.write(`yt-dlp: ${data}`));
+        ytdlp.stderr.on("data", (data) => process.stderr.write(`yt-dlp: ${data}`));
+
         ytdlp.on("close", (code) => {
-            code === 0 ? resolve() : reject(new Error(`Process exited with code ${code}`));
+            code === 0 ? resolve() : reject(new Error(`yt-dlp exited with code ${code}`));
         });
     });
 }
